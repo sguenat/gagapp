@@ -153,7 +153,7 @@ private fun HomeScreen(
 ) {
     var open by rememberSaveable { mutableStateOf<String?>(null) }
     Page(
-        title = "Goniomètre",
+        title = "Gaganiomètre",
         actions = { TextButton(onClick = onHistory) { Text("Historique ($historyCount)") } },
     ) { pad ->
         LazyColumn(
