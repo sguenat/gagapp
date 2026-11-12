@@ -32,6 +32,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -54,8 +57,10 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import java.text.SimpleDateFormat
@@ -89,7 +94,7 @@ private fun App() {
     val store = remember { RecordStore(context) }
     var records by remember { mutableStateOf(store.load()) }
     var screen by remember { mutableStateOf<Screen>(Screen.Home) }
-    var side by rememberSaveable { mutableStateOf("Droite") }
+    var side by rememberSaveable { mutableStateOf("R") }
 
     fun update(list: List<Record>) {
         records = list
@@ -134,7 +139,7 @@ private fun Page(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(title) },
+                title = { Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                 navigationIcon = { if (onBack != null) TextButton(onClick = onBack) { Text("←", fontSize = 24.sp) } },
                 actions = { actions() },
             )
@@ -153,8 +158,8 @@ private fun HomeScreen(
 ) {
     var open by rememberSaveable { mutableStateOf<String?>(null) }
     Page(
-        title = "Gaganiomètre",
-        actions = { TextButton(onClick = onHistory) { Text("Historique ($historyCount)") } },
+        title = stringResource(R.string.app_name),
+        actions = { TextButton(onClick = onHistory) { Text(stringResource(R.string.history_count, historyCount)) } },
     ) { pad ->
         LazyColumn(
             modifier = Modifier.fillMaxSize().padding(pad),
@@ -163,14 +168,18 @@ private fun HomeScreen(
         ) {
             item {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Côté", style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(R.string.side), style = MaterialTheme.typography.titleMedium)
                     Spacer(Modifier.width(8.dp))
-                    listOf("Gauche", "Droite").forEach {
-                        FilterChip(selected = side == it, onClick = { onSide(it) }, label = { Text(it) })
+                    listOf("L" to R.string.left, "R" to R.string.right).forEach { (key, label) ->
+                        FilterChip(
+                            selected = side == key,
+                            onClick = { onSide(key) },
+                            label = { Text(stringResource(label)) },
+                        )
                     }
                 }
                 Text(
-                    "Choisissez une articulation, puis le mouvement à mesurer.",
+                    stringResource(R.string.home_hint),
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.padding(vertical = 8.dp),
                 )
@@ -180,14 +189,18 @@ private fun HomeScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { open = if (open == joint.name) null else joint.name }
+                            .clickable { open = if (open == joint.key) null else joint.key }
                             .padding(16.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text(joint.name, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-                        Text(if (open == joint.name) "▲" else "▼")
+                        Text(
+                            stringResource(joint.name),
+                            style = MaterialTheme.typography.titleMedium,
+                            modifier = Modifier.weight(1f),
+                        )
+                        Text(if (open == joint.key) "▲" else "▼")
                     }
-                    if (open == joint.name) {
+                    if (open == joint.key) {
                         joint.movements.forEach { m ->
                             HorizontalDivider()
                             Row(
@@ -196,8 +209,11 @@ private fun HomeScreen(
                                     .clickable { onPick(joint, m) }
                                     .padding(horizontal = 24.dp, vertical = 14.dp),
                             ) {
-                                Text(m.name, modifier = Modifier.weight(1f))
-                                Text("norme ${m.ref}°", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(stringResource(m.name), modifier = Modifier.weight(1f))
+                                Text(
+                                    stringResource(R.string.norm_short, m.ref),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
                             }
                         }
                     }
@@ -209,6 +225,7 @@ private fun HomeScreen(
 
 private enum class Phase { READY, RUNNING, DONE }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun MeasureScreen(
     joint: Joint,
@@ -243,32 +260,33 @@ private fun MeasureScreen(
         }
     }
 
-    val title = jointWithSide(joint.name, side)
-    Page(title = title, onBack = onBack) { pad ->
+    Page(title = jointWithSide(context.resources, stringResource(joint.name), side), onBack = onBack) { pad ->
         Column(
             modifier = Modifier.fillMaxSize().padding(pad).padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Text(movement.name, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-            Text("Norme : ${movement.ref}°", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                stringResource(movement.name),
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+            )
+            Text(
+                stringResource(R.string.norm_long, movement.ref),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
 
             if (tracker.hasFusion && tracker.hasAccel) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.padding(top = 8.dp),
-                ) {
-                    FilterChip(
-                        selected = fusion,
-                        enabled = phase != Phase.RUNNING,
-                        onClick = { fusion = true },
-                        label = { Text("Gyro + accéléromètre") },
-                    )
-                    FilterChip(
-                        selected = !fusion,
-                        enabled = phase != Phase.RUNNING,
-                        onClick = { fusion = false },
-                        label = { Text("Accéléromètre seul") },
-                    )
+                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth().padding(top = 12.dp)) {
+                    listOf(true to R.string.sensor_gyro, false to R.string.sensor_accel)
+                        .forEachIndexed { i, (value, label) ->
+                            SegmentedButton(
+                                selected = fusion == value,
+                                onClick = { fusion = value },
+                                enabled = phase != Phase.RUNNING,
+                                shape = SegmentedButtonDefaults.itemShape(index = i, count = 2),
+                                icon = {},
+                            ) { Text(stringResource(label), maxLines = 1, softWrap = false) }
+                        }
                 }
             }
 
@@ -277,9 +295,9 @@ private fun MeasureScreen(
                 angle = shown,
                 ref = movement.ref,
                 caption = when (phase) {
-                    Phase.READY -> "Prêt"
-                    Phase.RUNNING -> "Max : ${maxAngle.roundToInt()}°"
-                    Phase.DONE -> "Amplitude maximale"
+                    Phase.READY -> stringResource(R.string.ready)
+                    Phase.RUNNING -> stringResource(R.string.max_fmt, maxAngle.roundToInt())
+                    Phase.DONE -> stringResource(R.string.max_amplitude)
                 },
                 modifier = Modifier.weight(1f).padding(24.dp),
             )
@@ -287,14 +305,11 @@ private fun MeasureScreen(
             when (phase) {
                 Phase.READY -> {
                     Text(
-                        if (fusion) "Fixez ou tenez le téléphone sur le segment mobile, placez l'articulation " +
-                            "en position de départ, puis mettez à zéro."
-                        else "Mode accéléromètre : le mouvement doit incliner le téléphone par rapport à la " +
-                            "verticale. Bougez lentement. Placez l'articulation en position de départ, puis mettez à zéro.",
+                        stringResource(if (fusion) R.string.hint_fusion else R.string.hint_accel),
                         textAlign = TextAlign.Center,
                         style = MaterialTheme.typography.bodyMedium,
                     )
-                    BigButton("Mettre à zéro et démarrer") {
+                    BigButton(stringResource(R.string.zero_start)) {
                         angle = 0f
                         maxAngle = 0f
                         saved = false
@@ -306,11 +321,11 @@ private fun MeasureScreen(
 
                 Phase.RUNNING -> {
                     Text(
-                        "Effectuez le mouvement. Le maximum atteint est conservé.",
+                        stringResource(R.string.hint_running),
                         textAlign = TextAlign.Center,
                         style = MaterialTheme.typography.bodyMedium,
                     )
-                    BigButton("Terminer") {
+                    BigButton(stringResource(R.string.finish)) {
                         tracker.clearZero()
                         phase = Phase.DONE
                     }
@@ -318,11 +333,11 @@ private fun MeasureScreen(
 
                 Phase.DONE -> {
                     val pct = (maxAngle / movement.ref * 100).roundToInt()
-                    Text("$pct % de la norme", style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(R.string.pct_norm, pct), style = MaterialTheme.typography.titleMedium)
                     OutlinedTextField(
                         value = note,
                         onValueChange = { note = it },
-                        label = { Text("Note (patient, remarque…)") },
+                        label = { Text(stringResource(R.string.note_label), maxLines = 1) },
                         singleLine = true,
                         enabled = !saved,
                         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
@@ -331,23 +346,26 @@ private fun MeasureScreen(
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                         modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
                     ) {
+                        val tight = PaddingValues(horizontal = 8.dp)
                         OutlinedButton(
                             onClick = { phase = Phase.READY; angle = 0f },
+                            contentPadding = tight,
                             modifier = Modifier.weight(1f).height(56.dp),
-                        ) { Text("Nouvelle mesure") }
+                        ) { OneLine(stringResource(R.string.new_measure)) }
                         Button(
                             enabled = !saved,
                             onClick = {
                                 onSave(
                                     Record(
-                                        System.currentTimeMillis(), joint.name, movement.name, side,
+                                        System.currentTimeMillis(), joint.key, movement.key, side,
                                         maxAngle.roundToInt(), movement.ref, note.trim(),
                                     )
                                 )
                                 saved = true
                             },
+                            contentPadding = tight,
                             modifier = Modifier.weight(1f).height(56.dp),
-                        ) { Text(if (saved) "Enregistré ✓" else "Enregistrer") }
+                        ) { OneLine(stringResource(if (saved) R.string.saved else R.string.save)) }
                     }
                 }
             }
@@ -356,9 +374,18 @@ private fun MeasureScreen(
 }
 
 @Composable
+private fun OneLine(text: String) {
+    Text(text, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis)
+}
+
+@Composable
 private fun BigButton(text: String, onClick: () -> Unit) {
-    Button(onClick = onClick, modifier = Modifier.fillMaxWidth().padding(top = 16.dp).height(56.dp)) {
-        Text(text, fontSize = 18.sp)
+    Button(
+        onClick = onClick,
+        contentPadding = PaddingValues(horizontal = 8.dp),
+        modifier = Modifier.fillMaxWidth().padding(top = 16.dp).height(56.dp),
+    ) {
+        Text(text, fontSize = 18.sp, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis)
     }
 }
 
@@ -390,7 +417,7 @@ private fun Gauge(angle: Float, ref: Int, caption: String, modifier: Modifier = 
         }
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text("${angle.roundToInt()}°", fontSize = 72.sp, fontWeight = FontWeight.Bold)
-            Text(caption, style = MaterialTheme.typography.titleLarge)
+            Text(caption, style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
         }
     }
 }
@@ -398,26 +425,27 @@ private fun Gauge(angle: Float, ref: Int, caption: String, modifier: Modifier = 
 @Composable
 private fun HistoryScreen(records: List<Record>, onBack: () -> Unit, onDelete: (Record) -> Unit) {
     val context = LocalContext.current
+    val res = context.resources
     val fmt = remember { SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault()) }
     Page(
-        title = "Historique",
+        title = stringResource(R.string.history),
         onBack = onBack,
         actions = {
             if (records.isNotEmpty()) TextButton(onClick = {
                 val text = records.joinToString("\n") { r ->
-                    "${fmt.format(Date(r.time))} — ${r.title} : ${r.angle}° (norme ${r.ref}°)" +
+                    res.getString(R.string.share_line, fmt.format(Date(r.time)), r.title(res), r.angle, r.ref) +
                         if (r.note.isNotEmpty()) " — ${r.note}" else ""
                 }
                 val send = Intent(Intent.ACTION_SEND).setType("text/plain")
-                    .putExtra(Intent.EXTRA_SUBJECT, "Mesures d'amplitude articulaire")
+                    .putExtra(Intent.EXTRA_SUBJECT, res.getString(R.string.share_subject))
                     .putExtra(Intent.EXTRA_TEXT, text)
-                context.startActivity(Intent.createChooser(send, "Partager les mesures"))
-            }) { Text("Partager") }
+                context.startActivity(Intent.createChooser(send, res.getString(R.string.share_chooser)))
+            }) { Text(stringResource(R.string.share)) }
         },
     ) { pad ->
         if (records.isEmpty()) {
             Box(Modifier.fillMaxSize().padding(pad), contentAlignment = Alignment.Center) {
-                Text("Aucune mesure enregistrée.")
+                Text(stringResource(R.string.no_records))
             }
         } else {
             LazyColumn(
@@ -429,7 +457,7 @@ private fun HistoryScreen(records: List<Record>, onBack: () -> Unit, onDelete: (
                     Card(modifier = Modifier.fillMaxWidth()) {
                         Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                             Column(modifier = Modifier.weight(1f)) {
-                                Text(r.title, style = MaterialTheme.typography.titleMedium)
+                                Text(r.title(res), style = MaterialTheme.typography.titleMedium)
                                 Text(
                                     fmt.format(Date(r.time)) + if (r.note.isNotEmpty()) " · ${r.note}" else "",
                                     style = MaterialTheme.typography.bodySmall,
@@ -438,7 +466,10 @@ private fun HistoryScreen(records: List<Record>, onBack: () -> Unit, onDelete: (
                             }
                             Column(horizontalAlignment = Alignment.End) {
                                 Text("${r.angle}°", fontSize = 24.sp, fontWeight = FontWeight.Bold)
-                                Text("norme ${r.ref}°", style = MaterialTheme.typography.bodySmall)
+                                Text(
+                                    stringResource(R.string.norm_short, r.ref),
+                                    style = MaterialTheme.typography.bodySmall,
+                                )
                             }
                             TextButton(onClick = { onDelete(r) }) { Text("✕") }
                         }

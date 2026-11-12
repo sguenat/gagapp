@@ -1,3 +1,62 @@
 <resources>
-    <string name="app_name">Gaganiomètre</string>
+    <string name="app_name" translatable="false">Gaganiomètre</string>
+
+    <string name="history">History</string>
+    <string name="history_count">History (%1$d)</string>
+    <string name="side">Side</string>
+    <string name="left">Left</string>
+    <string name="right">Right</string>
+    <string name="joint_side_left">%1$s, left side</string>
+    <string name="joint_side_right">%1$s, right side</string>
+    <string name="home_hint">Choose a joint, then the movement to measure.</string>
+    <string name="norm_short">normal %1$d°</string>
+    <string name="norm_long">Normal: %1$d°</string>
+
+    <string name="sensor_gyro">Gyroscope</string>
+    <string name="sensor_accel">Accelerometer</string>
+    <string name="ready">Ready</string>
+    <string name="max_fmt">Max: %1$d°</string>
+    <string name="max_amplitude">Maximum range</string>
+    <string name="hint_fusion">Strap or hold the phone on the moving segment, put the joint in its starting position, then zero.</string>
+    <string name="hint_accel">Accelerometer mode: the movement must tilt the phone relative to vertical. Move slowly. Put the joint in its starting position, then zero.</string>
+    <string name="zero_start">Zero and start</string>
+    <string name="hint_running">Perform the movement. The maximum reached is kept.</string>
+    <string name="finish">Finish</string>
+    <string name="pct_norm">%1$d%% of normal</string>
+    <string name="note_label">Note (patient, remark…)</string>
+    <string name="new_measure">New measurement</string>
+    <string name="save">Save</string>
+    <string name="saved">Saved ✓</string>
+
+    <string name="share">Share</string>
+    <string name="share_subject">Range of motion measurements</string>
+    <string name="share_chooser">Share measurements</string>
+    <string name="share_line">%1$s — %2$s: %3$d° (normal %4$d°)</string>
+    <string name="no_records">No saved measurements.</string>
+
+    <string name="joint_shoulder">Shoulder</string>
+    <string name="joint_elbow">Elbow</string>
+    <string name="joint_wrist">Wrist</string>
+    <string name="joint_hip">Hip</string>
+    <string name="joint_knee">Knee</string>
+    <string name="joint_ankle">Ankle</string>
+    <string name="joint_cervical">Cervical spine</string>
+    <string name="joint_lumbar">Thoracolumbar spine</string>
+
+    <string name="mv_flexion">Flexion</string>
+    <string name="mv_extension">Extension</string>
+    <string name="mv_abduction">Abduction</string>
+    <string name="mv_adduction">Adduction</string>
+    <string name="mv_internal_rotation">Internal rotation</string>
+    <string name="mv_external_rotation">External rotation</string>
+    <string name="mv_pronation">Pronation</string>
+    <string name="mv_supination">Supination</string>
+    <string name="mv_radial_deviation">Radial deviation</string>
+    <string name="mv_ulnar_deviation">Ulnar deviation</string>
+    <string name="mv_dorsiflexion">Dorsiflexion</string>
+    <string name="mv_plantarflexion">Plantar flexion</string>
+    <string name="mv_inversion">Inversion</string>
+    <string name="mv_eversion">Eversion</string>
+    <string name="mv_lateral_flexion">Lateral flexion</string>
+    <string name="mv_rotation">Rotation</string>
 </resources>

@@ -1,93 +1,103 @@
 package org.gagapp.gonio
 
 import android.content.Context
+import android.content.res.Resources
+import androidx.annotation.StringRes
 import org.json.JSONArray
 import org.json.JSONObject
 
-/** [ref] is the usual normal amplitude in degrees (AAOS values). */
-data class Movement(val name: String, val ref: Int, val sided: Boolean = true)
+/** [ref] is the usual normal amplitude in degrees (AAOS values). [key] is what gets stored. */
+data class Movement(val key: String, @StringRes val name: Int, val ref: Int, val sided: Boolean = true)
 
-data class Joint(val name: String, val movements: List<Movement>)
+data class Joint(val key: String, @StringRes val name: Int, val movements: List<Movement>)
 
 val JOINTS = listOf(
     Joint(
-        "Épaule", listOf(
-            Movement("Flexion", 180),
-            Movement("Extension", 60),
-            Movement("Abduction", 180),
-            Movement("Rotation interne", 70),
-            Movement("Rotation externe", 90),
+        "shoulder", R.string.joint_shoulder, listOf(
+            Movement("flexion", R.string.mv_flexion, 180),
+            Movement("extension", R.string.mv_extension, 60),
+            Movement("abduction", R.string.mv_abduction, 180),
+            Movement("internal_rotation", R.string.mv_internal_rotation, 70),
+            Movement("external_rotation", R.string.mv_external_rotation, 90),
         )
     ),
     Joint(
-        "Coude", listOf(
-            Movement("Flexion", 150),
-            Movement("Pronation", 80),
-            Movement("Supination", 80),
+        "elbow", R.string.joint_elbow, listOf(
+            Movement("flexion", R.string.mv_flexion, 150),
+            Movement("pronation", R.string.mv_pronation, 80),
+            Movement("supination", R.string.mv_supination, 80),
         )
     ),
     Joint(
-        "Poignet", listOf(
-            Movement("Flexion", 80),
-            Movement("Extension", 70),
-            Movement("Inclinaison radiale", 20),
-            Movement("Inclinaison ulnaire", 30),
+        "wrist", R.string.joint_wrist, listOf(
+            Movement("flexion", R.string.mv_flexion, 80),
+            Movement("extension", R.string.mv_extension, 70),
+            Movement("radial_deviation", R.string.mv_radial_deviation, 20),
+            Movement("ulnar_deviation", R.string.mv_ulnar_deviation, 30),
         )
     ),
     Joint(
-        "Hanche", listOf(
-            Movement("Flexion", 120),
-            Movement("Extension", 30),
-            Movement("Abduction", 45),
-            Movement("Adduction", 30),
-            Movement("Rotation interne", 45),
-            Movement("Rotation externe", 45),
+        "hip", R.string.joint_hip, listOf(
+            Movement("flexion", R.string.mv_flexion, 120),
+            Movement("extension", R.string.mv_extension, 30),
+            Movement("abduction", R.string.mv_abduction, 45),
+            Movement("adduction", R.string.mv_adduction, 30),
+            Movement("internal_rotation", R.string.mv_internal_rotation, 45),
+            Movement("external_rotation", R.string.mv_external_rotation, 45),
         )
     ),
-    Joint("Genou", listOf(Movement("Flexion", 135))),
+    Joint("knee", R.string.joint_knee, listOf(Movement("flexion", R.string.mv_flexion, 135))),
     Joint(
-        "Cheville", listOf(
-            Movement("Flexion dorsale", 20),
-            Movement("Flexion plantaire", 50),
-            Movement("Inversion", 35),
-            Movement("Éversion", 15),
-        )
-    ),
-    Joint(
-        "Rachis cervical", listOf(
-            Movement("Flexion", 45, sided = false),
-            Movement("Extension", 45, sided = false),
-            Movement("Inclinaison latérale", 45),
-            Movement("Rotation", 60),
+        "ankle", R.string.joint_ankle, listOf(
+            Movement("dorsiflexion", R.string.mv_dorsiflexion, 20),
+            Movement("plantarflexion", R.string.mv_plantarflexion, 50),
+            Movement("inversion", R.string.mv_inversion, 35),
+            Movement("eversion", R.string.mv_eversion, 15),
         )
     ),
     Joint(
-        "Rachis thoraco-lombaire", listOf(
-            Movement("Flexion", 80, sided = false),
-            Movement("Extension", 25, sided = false),
-            Movement("Inclinaison latérale", 35),
-            Movement("Rotation", 45),
+        "cervical", R.string.joint_cervical, listOf(
+            Movement("flexion", R.string.mv_flexion, 45, sided = false),
+            Movement("extension", R.string.mv_extension, 45, sided = false),
+            Movement("lateral_flexion", R.string.mv_lateral_flexion, 45),
+            Movement("rotation", R.string.mv_rotation, 60),
+        )
+    ),
+    Joint(
+        "lumbar", R.string.joint_lumbar, listOf(
+            Movement("flexion", R.string.mv_flexion, 80, sided = false),
+            Movement("extension", R.string.mv_extension, 25, sided = false),
+            Movement("lateral_flexion", R.string.mv_lateral_flexion, 35),
+            Movement("rotation", R.string.mv_rotation, 45),
         )
     ),
 )
 
+/** [side] is "L", "R" or "" for movements that have no side. */
+fun jointWithSide(res: Resources, joint: String, side: String): String = when (side) {
+    "R" -> res.getString(R.string.joint_side_right, joint)
+    "L" -> res.getString(R.string.joint_side_left, joint)
+    else -> joint
+}
+
 data class Record(
     val time: Long,
-    val joint: String,
-    val movement: String,
-    val side: String, // "Gauche", "Droite" or ""
+    val jointKey: String,
+    val movementKey: String,
+    val side: String,
     val angle: Int,
     val ref: Int,
     val note: String = "",
+    /** Records saved before the app was translated only have their French title. */
+    val legacyTitle: String? = null,
 ) {
-    val title: String get() = "${jointWithSide(joint, side)} · $movement"
-}
-
-/** "Coude, côté droit" — worded so it agrees with both masculine and feminine joint names. */
-fun jointWithSide(joint: String, side: String): String = when (side) {
-    "Droite" -> "$joint, côté droit"
-    "Gauche" -> "$joint, côté gauche"
-    else -> joint
+    fun title(res: Resources): String {
+        if (legacyTitle != null) return legacyTitle
+        val joint = JOINTS.find { it.key == jointKey }
+        val movement = joint?.movements?.find { it.key == movementKey }
+        if (joint == null || movement == null) return "$jointKey · $movementKey"
+        return "${jointWithSide(res, res.getString(joint.name), side)} · ${res.getString(movement.name)}"
+    }
 }
 
 class RecordStore(context: Context) {
@@ -97,9 +107,20 @@ class RecordStore(context: Context) {
         val arr = JSONArray(prefs.getString("list", "[]"))
         return List(arr.length()) { i ->
             val o = arr.getJSONObject(i)
+            val legacy = o.optString("legacy").ifEmpty {
+                if (!o.has("joint")) null else {
+                    val side = when (o.optString("side")) {
+                        "Droite" -> ", côté droit"
+                        "Gauche" -> ", côté gauche"
+                        else -> ""
+                    }
+                    "${o.getString("joint")}$side · ${o.getString("movement")}"
+                }
+            }
             Record(
-                o.getLong("time"), o.getString("joint"), o.getString("movement"),
-                o.getString("side"), o.getInt("angle"), o.getInt("ref"), o.optString("note"),
+                o.getLong("time"), o.optString("j"), o.optString("m"),
+                if (legacy == null) o.optString("side") else "",
+                o.getInt("angle"), o.getInt("ref"), o.optString("note"), legacy,
             )
         }
     }
@@ -107,11 +128,11 @@ class RecordStore(context: Context) {
     fun save(records: List<Record>) {
         val arr = JSONArray()
         records.forEach {
-            arr.put(
-                JSONObject()
-                    .put("time", it.time).put("joint", it.joint).put("movement", it.movement)
-                    .put("side", it.side).put("angle", it.angle).put("ref", it.ref).put("note", it.note)
-            )
+            val o = JSONObject()
+                .put("time", it.time).put("j", it.jointKey).put("m", it.movementKey)
+                .put("side", it.side).put("angle", it.angle).put("ref", it.ref).put("note", it.note)
+            if (it.legacyTitle != null) o.put("legacy", it.legacyTitle)
+            arr.put(o)
         }
         prefs.edit().putString("list", arr.toString()).apply()
     }
