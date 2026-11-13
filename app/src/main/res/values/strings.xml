@@ -1,6 +1,11 @@
 <resources>
     <string name="app_name" translatable="false">Gaganiomètre</string>
 
+    <string name="quick_measure">Quick measurement</string>
+    <string name="quick_sub">Any angle, no reference value</string>
+    <string name="free_measure">Free measurement</string>
+    <string name="measure_action">Measure</string>
+    <string name="share_line_free">%1$s — %2$s: %3$d°</string>
     <string name="history">History</string>
     <string name="history_count">History (%1$d)</string>
     <string name="side">Side</string>
@@ -8,7 +13,7 @@
     <string name="right">Right</string>
     <string name="joint_side_left">%1$s, left side</string>
     <string name="joint_side_right">%1$s, right side</string>
-    <string name="home_hint">Choose a joint, then the movement to measure.</string>
+    <string name="home_hint">Or choose a joint, then tap a movement to measure it.</string>
     <string name="norm_short">normal %1$d°</string>
     <string name="norm_long">Normal: %1$d°</string>
 

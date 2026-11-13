@@ -73,6 +73,9 @@ val JOINTS = listOf(
     ),
 )
 
+/** Joint key of a quick measurement taken without choosing a joint (no reference value). */
+const val FREE_KEY = "free"
+
 /** [side] is "L", "R" or "" for movements that have no side. */
 fun jointWithSide(res: Resources, joint: String, side: String): String = when (side) {
     "R" -> res.getString(R.string.joint_side_right, joint)
@@ -93,6 +96,7 @@ data class Record(
 ) {
     fun title(res: Resources): String {
         if (legacyTitle != null) return legacyTitle
+        if (jointKey == FREE_KEY) return res.getString(R.string.free_measure)
         val joint = JOINTS.find { it.key == jointKey }
         val movement = joint?.movements?.find { it.key == movementKey }
         if (joint == null || movement == null) return "$jointKey · $movementKey"

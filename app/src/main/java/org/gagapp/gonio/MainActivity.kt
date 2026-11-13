@@ -23,11 +23,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -75,8 +77,15 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             val primary = Color(0xFF1F4E79)
-            val scheme = if (isSystemInDarkTheme()) darkColorScheme(primary = Color(0xFF9CC8F2))
-            else lightColorScheme(primary = primary)
+            val scheme = if (isSystemInDarkTheme()) darkColorScheme(
+                primary = Color(0xFF9CC8F2),
+                primaryContainer = Color(0xFF1F4E79),
+                onPrimaryContainer = Color(0xFFD6E6F5),
+            ) else lightColorScheme(
+                primary = primary,
+                primaryContainer = Color(0xFFD6E6F5),
+                onPrimaryContainer = Color(0xFF0F2F4D),
+            )
             MaterialTheme(colorScheme = scheme) { App() }
         }
     }
@@ -85,7 +94,8 @@ class MainActivity : ComponentActivity() {
 private sealed interface Screen {
     data object Home : Screen
     data object History : Screen
-    data class Measure(val joint: Joint, val movement: Movement) : Screen
+    /** [joint] and [movement] are null for a quick measurement with no reference value. */
+    data class Measure(val joint: Joint?, val movement: Movement?) : Screen
 }
 
 @Composable
@@ -109,6 +119,7 @@ private fun App() {
             onSide = { side = it },
             historyCount = records.size,
             onHistory = { screen = Screen.History },
+            onQuick = { screen = Screen.Measure(null, null) },
             onPick = { j, m -> screen = Screen.Measure(j, m) },
         )
 
@@ -121,7 +132,7 @@ private fun App() {
         is Screen.Measure -> MeasureScreen(
             joint = s.joint,
             movement = s.movement,
-            side = if (s.movement.sided) side else "",
+            side = if (s.movement?.sided == true) side else "",
             onBack = { screen = Screen.Home },
             onSave = { r -> update(listOf(r) + records) },
         )
@@ -154,6 +165,7 @@ private fun HomeScreen(
     onSide: (String) -> Unit,
     historyCount: Int,
     onHistory: () -> Unit,
+    onQuick: () -> Unit,
     onPick: (Joint, Movement) -> Unit,
 ) {
     var open by rememberSaveable { mutableStateOf<String?>(null) }
@@ -167,6 +179,31 @@ private fun HomeScreen(
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             item {
+                Button(
+                    onClick = onQuick,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFFF2A93B),
+                        contentColor = Color(0xFF2B1B00),
+                    ),
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.padding(vertical = 8.dp),
+                    ) {
+                        Text(
+                            "⚡ " + stringResource(R.string.quick_measure),
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                        )
+                        Text(
+                            stringResource(R.string.quick_sub),
+                            style = MaterialTheme.typography.bodySmall,
+                            textAlign = TextAlign.Center,
+                        )
+                    }
+                }
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(stringResource(R.string.side), style = MaterialTheme.typography.titleMedium)
                     Spacer(Modifier.width(8.dp))
@@ -201,19 +238,40 @@ private fun HomeScreen(
                         Text(if (open == joint.key) "▲" else "▼")
                     }
                     if (open == joint.key) {
-                        joint.movements.forEach { m ->
-                            HorizontalDivider()
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { onPick(joint, m) }
-                                    .padding(horizontal = 24.dp, vertical = 14.dp),
-                            ) {
-                                Text(stringResource(m.name), modifier = Modifier.weight(1f))
-                                Text(
-                                    stringResource(R.string.norm_short, m.ref),
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 12.dp),
+                        ) {
+                            joint.movements.forEach { m ->
+                                Surface(
+                                    onClick = { onPick(joint, m) },
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = MaterialTheme.colorScheme.primaryContainer,
+                                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    shadowElevation = 1.dp,
+                                    modifier = Modifier.fillMaxWidth(),
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+                                    ) {
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                stringResource(m.name),
+                                                style = MaterialTheme.typography.titleSmall,
+                                            )
+                                            Text(
+                                                stringResource(R.string.norm_short, m.ref),
+                                                style = MaterialTheme.typography.bodySmall,
+                                            )
+                                        }
+                                        Text(
+                                            stringResource(R.string.measure_action) + "  ›",
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.primary,
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
@@ -228,8 +286,8 @@ private enum class Phase { READY, RUNNING, DONE }
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun MeasureScreen(
-    joint: Joint,
-    movement: Movement,
+    joint: Joint?,
+    movement: Movement?,
     side: String,
     onBack: () -> Unit,
     onSave: (Record) -> Unit,
@@ -260,20 +318,24 @@ private fun MeasureScreen(
         }
     }
 
-    Page(title = jointWithSide(context.resources, stringResource(joint.name), side), onBack = onBack) { pad ->
+    val title = if (joint == null) stringResource(R.string.free_measure)
+    else jointWithSide(context.resources, stringResource(joint.name), side)
+    Page(title = title, onBack = onBack) { pad ->
         Column(
             modifier = Modifier.fillMaxSize().padding(pad).padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Text(
-                stringResource(movement.name),
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-            )
-            Text(
-                stringResource(R.string.norm_long, movement.ref),
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            if (movement != null) {
+                Text(
+                    stringResource(movement.name),
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                )
+                Text(
+                    stringResource(R.string.norm_long, movement.ref),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
 
             if (tracker.hasFusion && tracker.hasAccel) {
                 SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth().padding(top = 12.dp)) {
@@ -293,7 +355,7 @@ private fun MeasureScreen(
             val shown = if (phase == Phase.DONE) maxAngle else angle
             Gauge(
                 angle = shown,
-                ref = movement.ref,
+                ref = movement?.ref,
                 caption = when (phase) {
                     Phase.READY -> stringResource(R.string.ready)
                     Phase.RUNNING -> stringResource(R.string.max_fmt, maxAngle.roundToInt())
@@ -332,8 +394,10 @@ private fun MeasureScreen(
                 }
 
                 Phase.DONE -> {
-                    val pct = (maxAngle / movement.ref * 100).roundToInt()
-                    Text(stringResource(R.string.pct_norm, pct), style = MaterialTheme.typography.titleMedium)
+                    if (movement != null) {
+                        val pct = (maxAngle / movement.ref * 100).roundToInt()
+                        Text(stringResource(R.string.pct_norm, pct), style = MaterialTheme.typography.titleMedium)
+                    }
                     OutlinedTextField(
                         value = note,
                         onValueChange = { note = it },
@@ -357,8 +421,8 @@ private fun MeasureScreen(
                             onClick = {
                                 onSave(
                                     Record(
-                                        System.currentTimeMillis(), joint.key, movement.key, side,
-                                        maxAngle.roundToInt(), movement.ref, note.trim(),
+                                        System.currentTimeMillis(), joint?.key ?: FREE_KEY, movement?.key ?: "",
+                                        side, maxAngle.roundToInt(), movement?.ref ?: 0, note.trim(),
                                     )
                                 )
                                 saved = true
@@ -389,9 +453,9 @@ private fun BigButton(text: String, onClick: () -> Unit) {
     }
 }
 
-/** Ring dial: a full turn is 180°. The thin outer arc marks the normal range, the thick one the measure. */
+/** Ring dial: a full turn is 180°. The thin outer arc marks the normal range (if any), the thick one the measure. */
 @Composable
-private fun Gauge(angle: Float, ref: Int, caption: String, modifier: Modifier = Modifier) {
+private fun Gauge(angle: Float, ref: Int?, caption: String, modifier: Modifier = Modifier) {
     val track = MaterialTheme.colorScheme.surfaceVariant
     val measure = MaterialTheme.colorScheme.primary
     val normal = Color(0xFF3FA66B)
@@ -403,11 +467,13 @@ private fun Gauge(angle: Float, ref: Int, caption: String, modifier: Modifier = 
             val arcSize = Size(size.width - 2 * inset, size.height - 2 * inset)
             val topLeft = Offset(inset, inset)
             drawArc(track, -90f, 360f, false, topLeft, arcSize, style = Stroke(thick))
-            drawArc(
-                normal, -90f, (ref / 180f * 360f).coerceAtMost(360f), false,
-                Offset(thin / 2, thin / 2), Size(size.width - thin, size.height - thin),
-                style = Stroke(thin, cap = StrokeCap.Round),
-            )
+            if (ref != null) {
+                drawArc(
+                    normal, -90f, (ref / 180f * 360f).coerceAtMost(360f), false,
+                    Offset(thin / 2, thin / 2), Size(size.width - thin, size.height - thin),
+                    style = Stroke(thin, cap = StrokeCap.Round),
+                )
+            }
             if (angle > 0.5f) {
                 drawArc(
                     measure, -90f, (angle / 180f * 360f).coerceAtMost(360f), false,
@@ -433,7 +499,9 @@ private fun HistoryScreen(records: List<Record>, onBack: () -> Unit, onDelete: (
         actions = {
             if (records.isNotEmpty()) TextButton(onClick = {
                 val text = records.joinToString("\n") { r ->
-                    res.getString(R.string.share_line, fmt.format(Date(r.time)), r.title(res), r.angle, r.ref) +
+                    val date = fmt.format(Date(r.time))
+                    (if (r.ref > 0) res.getString(R.string.share_line, date, r.title(res), r.angle, r.ref)
+                    else res.getString(R.string.share_line_free, date, r.title(res), r.angle)) +
                         if (r.note.isNotEmpty()) " — ${r.note}" else ""
                 }
                 val send = Intent(Intent.ACTION_SEND).setType("text/plain")
@@ -466,7 +534,7 @@ private fun HistoryScreen(records: List<Record>, onBack: () -> Unit, onDelete: (
                             }
                             Column(horizontalAlignment = Alignment.End) {
                                 Text("${r.angle}°", fontSize = 24.sp, fontWeight = FontWeight.Bold)
-                                Text(
+                                if (r.ref > 0) Text(
                                     stringResource(R.string.norm_short, r.ref),
                                     style = MaterialTheme.typography.bodySmall,
                                 )

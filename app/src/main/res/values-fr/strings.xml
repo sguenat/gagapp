@@ -1,4 +1,9 @@
 <resources>
+    <string name="quick_measure">Mesure rapide</string>
+    <string name="quick_sub">N\'importe quel angle, sans norme</string>
+    <string name="free_measure">Mesure libre</string>
+    <string name="measure_action">Mesurer</string>
+    <string name="share_line_free">%1$s — %2$s : %3$d°</string>
     <string name="history">Historique</string>
     <string name="history_count">Historique (%1$d)</string>
     <string name="side">Côté</string>
@@ -6,7 +11,7 @@
     <string name="right">Droite</string>
     <string name="joint_side_left">%1$s, côté gauche</string>
     <string name="joint_side_right">%1$s, côté droit</string>
-    <string name="home_hint">Choisissez une articulation, puis le mouvement à mesurer.</string>
+    <string name="home_hint">Ou choisissez une articulation, puis touchez un mouvement pour le mesurer.</string>
     <string name="norm_short">norme %1$d°</string>
     <string name="norm_long">Norme : %1$d°</string>
 
